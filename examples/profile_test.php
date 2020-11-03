@@ -1,8 +1,10 @@
 <html>
 <body>
 <?php
-
-	require_once("../nbbc.php");
+error_reporting(E_ALL);
+ini_set('display_errors',true);
+require_once(__DIR__ . "/../vendor/autoload.php");
+use Nbbc\BBCode;
 	
 	$input = <<< EOI
 From [url=http://www.ushistory.org/Declaration/document/index.htm]ushistory.org[/url]:

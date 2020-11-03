@@ -7,8 +7,10 @@
 </head>
 <body>
 <?php
-
-	require_once("../nbbc.php");
+error_reporting(E_ALL);
+ini_set('display_errors',true);
+require_once(__DIR__ . "/../vendor/autoload.php");
+use Nbbc\BBCode;
 	
 	$input = "[border color=red size=3]This text is in a medium red border![/border]\n"
 		. "[border size=10]This text is in a fat blue border![/border]\n"
@@ -17,7 +19,7 @@
 	$bbcode = new BBCode;
 
 	$bbcode->AddRule('border',  Array(
-		'mode' => BBCODE_MODE_ENHANCED,
+		'mode' => Nbbc\BBCode::BBCODE_MODE_ENHANCED,
 		'template' => '<div style="border: {$size}px solid {$color}">{$_content}</div>',
 		'allow' => Array(
 			'color' => '/^#[0-9a-fA-F]+|[a-zA-Z]+$/',
