@@ -62,7 +62,7 @@ require_once(__DIR__ . "/../vendor/autoload.php");
 use Nbbc\BBCode;
 ?>
 
-<h1>Full BBCode Example (NBBC v<?php print BBCODE_VERSION; ?>)</h1>
+<h1>Full BBCode Example</h1>
 
 <div class='box'>
 
