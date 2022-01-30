@@ -762,7 +762,7 @@ class BBCode {
     // and performs exactly the same function.  Unlike html_entity_decode, it
     // works on older versions of PHP (prior to 4.3.0).
     public function unHTMLEncode($string) {
-        return html_entity_decode($string);
+        return html_entity_decode($string, ENT_QUOTES);
     }
 
 
@@ -903,7 +903,7 @@ class BBCode {
     public function htmlEncode($string) {
         if ($this->escape_content) {
             if (!$this->allow_ampersand) {
-                return htmlspecialchars($string);
+                return htmlspecialchars($string, ENT_QUOTES);
             } else {
                 return str_replace(['<', '>', '"'], ['&lt;', '&gt;', '&quot;'], $string);
             }
@@ -995,9 +995,9 @@ class BBCode {
                         // For non-smiley text, we just pass it through htmlspecialchars.
                         $output .= $this->htmlEncode($token);
                     } else {
-                        $alt = htmlspecialchars($token);
+                        $alt = htmlspecialchars($token, ENT_QUOTES);
                         if ($smiley_count < $this->max_smileys || $this->max_smileys < 0) {
-                            $output .= "<img src=\"".htmlspecialchars($this->smiley_url.'/'.$this->smileys[$token]).'"'
+                            $output .= "<img src=\"".htmlspecialchars($this->smiley_url.'/'.$this->smileys[$token], ENT_QUOTES).'"'
 //								. "\" width=\"{$info[ 0 ]}\" height=\"{$info[ 1 ]}\""
                                 ." alt=\"$alt\" title=\"$alt\" class=\"bbcode_smiley\" />";
                         } else {
@@ -1310,7 +1310,7 @@ REGEX;
                     } elseif (isset($flags['k'])) {
                         $value = $this->wikify($value);
                     } elseif (isset($flags['h'])) {
-                        $value = htmlspecialchars($value);
+                        $value = htmlspecialchars($value, ENT_QUOTES);
                     } elseif (isset($flags['u'])) {
                         $value = urlencode($value);
                     }
@@ -1437,15 +1437,15 @@ REGEX;
                         $this->lost_start_tags[$name]++;
                     }
 
-                    $end = $this->cleanupWSByIteratingPointer($rule['before_endtag'], 0, $output);
-                    $this->cleanupWSByPoppingStack($rule['after_tag'], $output);
+                    $end = $this->cleanupWSByIteratingPointer($rule['before_endtag'] ?? '', 0, $output);
+                    $this->cleanupWSByPoppingStack($rule['after_tag'] ?? '', $output);
                     $tag_body = $this->collectTextReverse($output, count($output) - 1, $end);
 
                     // Note:  We don't process 'after_endtag' because the invisible end tag
                     // always butts up against another tag, so there's *never* any whitespace
                     // after it.  Attempting to process 'after_endtag' would just be a waste
                     // of time because it'd never match.  But 'before_tag' is useful, though.
-                    $this->cleanupWSByPoppingStack($rule['before_tag'], $this->stack);
+                    $this->cleanupWSByPoppingStack($rule['before_tag'] ?? '', $this->stack);
 
                     Debugger::debug("<b>Internal_GenerateOutput:</b> optional-tag's content: <tt>"
                         .htmlspecialchars($tag_body)."</tt><br>\n");
@@ -1593,15 +1593,11 @@ REGEX;
         // do end-tag cleanup by popping, and we do start-tag cleanup by skipping
         // $pos forward.  (We add one because we've actually rewound the stack
         // to the start tag itself.)
-        if (isset($this->tag_rules[$tag_name]) && isset($this->tag_rules[$tag_name]['after_tag'])) {
-            $newpos = $this->cleanupWSByIteratingPointer(
-                isset($this->tag_rules[$tag_name]['after_tag']) ? $this->tag_rules[$tag_name]['after_tag'] : null,
-                $pos + 1,
-                $this->stack
-            );
-        } else {
-            $newpos = $this->cleanupWSByIteratingPointer(null, $pos + 1, $this->stack);
-        }
+        $newpos = $this->cleanupWSByIteratingPointer(
+            $this->tag_rules[$tag_name]['after_tag'] ?? '',
+            $pos + 1,
+            $this->stack
+        );
         $delta = $newpos - ($pos + 1);
 
         if ($this->debug) {
@@ -1616,11 +1612,7 @@ REGEX;
         $output = $this->generateOutput($newpos);
 
         // Clean off any whitespace before the end tag that doesn't belong there.
-        if (isset($this->tag_rules[$tag_name]) && isset($this->tag_rules[$tag_name]['before_endtag'])) {
-            $newend = $this->cleanupWSByIteratingPointer($this->tag_rules[$tag_name]['before_endtag'], 0, $output);
-        } else {
-            $newend = $this->cleanupWSByIteratingPointer(null, 0, $output);
-        }
+        $newend = $this->cleanupWSByIteratingPointer($this->tag_rules[$tag_name]['before_endtag'] ?? '', 0, $output);
         $output = $this->collectTextReverse($output, count($output) - 1, $newend);
 
         if ($this->debug)
@@ -1666,7 +1658,7 @@ REGEX;
 
             switch ($item[self::BBCODE_STACK_TOKEN]) {
                 case self::BBCODE_TEXT:
-                    $string .= "\"".htmlspecialchars($item[self::BBCODE_STACK_TEXT])."\" ";
+                    $string .= "\"".htmlspecialchars($item[self::BBCODE_STACK_TEXT], ENT_QUOTES)."\" ";
                     break;
                 case self::BBCODE_WS:
                     $string .= "WS ";
@@ -1675,7 +1667,7 @@ REGEX;
                     $string .= "NL ";
                     break;
                 case self::BBCODE_TAG:
-                    $string .= "[".htmlspecialchars($item[self::BBCODE_STACK_TAG]['_name'])."] ";
+                    $string .= "[".htmlspecialchars($item[self::BBCODE_STACK_TAG]['_name'], ENT_QUOTES)."] ";
                     break;
                 default:
                     $string .= "unknown ";
@@ -1861,7 +1853,7 @@ REGEX;
     //
     //   $params is an array of key => value parameters associated with the tag; for example,
     //        in [smiley src=smile alt=:-)], it's Array('src' => "smile", 'alt' => ":-)").
-    //        These keys and values have NOT beel passed through htmlspecialchars().
+    //        These keys and values have NOT been passed through htmlspecialchars().
     //
     //   $contents is the body of the tag during BBCODE_OUTPUT.  For example, in
     //        [b]Hello[/b], it's "Hello".  THIS VALUE IS ALWAYS HTML, not BBCode.
@@ -1978,7 +1970,7 @@ REGEX;
                             break;
                         }
                         if (isset($params[$possible_content]) && strlen($params[$possible_content]) > 0) {
-                            $result = htmlspecialchars($params[$possible_content]);
+                            $result = htmlspecialchars($params[$possible_content], ENT_QUOTES);
                             break;
                         }
                     }
@@ -2146,9 +2138,9 @@ REGEX;
             return;
         }
 
-        $this->cleanupWSByPoppingStack($tag_rule['before_tag'], $this->stack);
+        $this->cleanupWSByPoppingStack($tag_rule['before_tag'] ?? '', $this->stack);
         $output = $this->doTag(self::BBCODE_OUTPUT, $tag_name, $tag_params['_default'], $tag_params, "");
-        $this->cleanupWSByEatingInput($tag_rule['after_tag']);
+        $this->cleanupWSByEatingInput($tag_rule['after_tag'] ?? '');
 
         if ($this->debug) {
             Debugger::debug("<b>ProcessIsolatedTag:</b> isolated tag <tt>[".htmlspecialchars($tag_name)
@@ -2219,7 +2211,7 @@ REGEX;
 
             $this->stack[] = Array(
                 self::BBCODE_STACK_TOKEN => $token_type,
-                self::BBCODE_STACK_TEXT => htmlspecialchars($this->lexer->text),
+                self::BBCODE_STACK_TEXT => htmlspecialchars($this->lexer->text, ENT_QUOTES),
                 self::BBCODE_STACK_TAG => $this->lexer->tag,
                 self::BBCODE_STACK_CLASS => $this->current_class,
             );
@@ -2254,21 +2246,9 @@ REGEX;
             Debugger::debug("<b>Internal_ProcessVerbatimTag:</b> found end tag.<br>\n");
 
         // Clean up whitespace everywhere except before the start tag.
-        if (isset($tag_rule['after_tag'])) {
-            $newstart = $this->cleanupWSByIteratingPointer($tag_rule['after_tag'], $start, $this->stack);
-        } else {
-            $newstart = $this->cleanupWSByIteratingPointer(null, $start, $this->stack);
-        }
-        if (isset($tag_rule['before_endtag'])) {
-            $this->cleanupWSByPoppingStack($tag_rule['before_endtag'], $this->stack);
-        } else {
-            $this->cleanupWSByPoppingStack(null, $this->stack);
-        }
-        if (isset($tag_rule['after_endtag'])) {
-            $this->cleanupWSByEatingInput($tag_rule['after_endtag']);
-        } else {
-            $this->cleanupWSByEatingInput(null);
-        }
+        $newstart = $this->cleanupWSByIteratingPointer($tag_rule['after_tag'] ?? '', $start, $this->stack);
+        $this->cleanupWSByPoppingStack($tag_rule['before_endtag'] ?? '', $this->stack);
+        $this->cleanupWSByEatingInput($tag_rule['after_endtag'] ?? '');
 
         // Collect the output from $newstart to the top of the stack, and then
         // quickly pop off all of those tokens.
@@ -2282,11 +2262,7 @@ REGEX;
 
         // Clean up whitespace before the start tag (the tag was never pushed
         // onto the stack itself, so we don't need to remove it).
-        if (isset($tag_rule['before_tag'])) {
-            $this->cleanupWSByPoppingStack($tag_rule['before_tag'], $this->stack);
-        } else {
-            $this->cleanupWSByPoppingStack(null, $this->stack);
-        }
+        $this->cleanupWSByPoppingStack($tag_rule['before_tag'] ?? '', $this->stack);
 
         // Found the end tag, so process this tag immediately with
         // the contents collected between them.  Note that we do NOT
@@ -2510,11 +2486,7 @@ REGEX;
         $start_tag_params = $start_tag_node[self::BBCODE_STACK_TAG];
         $this->computeCurrentClass();
 
-        if (isset($this->tag_rules[$tag_name]) && isset($this->tag_rules[$tag_name]['before_tag'])) {
-            $this->cleanupWSByPoppingStack($this->tag_rules[$tag_name]['before_tag'], $this->stack);
-        } else {
-            $this->cleanupWSByPoppingStack(null, $this->stack);
-        }
+        $this->cleanupWSByPoppingStack($this->tag_rules[$tag_name]['before_tag'] ?? '', $this->stack);
         $start_tag_params['_endtag'] = $tag_params['_tag'];
         $start_tag_params['_hasend'] = true;
         $output = $this->doTag(
@@ -2525,11 +2497,7 @@ REGEX;
             $contents
         );
 
-        if (isset($this->tag_rules[$tag_name]['after_endtag'])) {
-            $this->cleanupWSByEatingInput($this->tag_rules[$tag_name]['after_endtag']);
-        } else {
-            $this->cleanupWSByEatingInput(null);
-        }
+        $this->cleanupWSByEatingInput($this->tag_rules[$tag_name]['after_endtag'] ?? '');
 
         if ($this->debug) {
             Debugger::debug("<b>Internal_ParseEndTagToken:</b> end tag <tt>[/"
@@ -2616,8 +2584,7 @@ REGEX;
         $this->was_limited = false;
 
         // Remove any initial whitespace in pre-trim mode.
-        if (strlen($this->pre_trim) > 0)
-            $this->cleanupWSByEatingInput($this->pre_trim);
+        $this->cleanupWSByEatingInput($this->pre_trim);
 
         // In plain mode, we generate newlines instead of <br> tags.
         $newline = $this->plain_mode ? "\n" : "<br>\n";
@@ -2770,8 +2737,7 @@ REGEX;
             Debugger::debug("<hr />\n<b>Parse Done:</b> done main parse; packing stack as text string.<br>\n");
 
         // Remove any trailing whitespace in post-trim mode.
-        if (strlen($this->post_trim) > 0)
-            $this->cleanupWSByPoppingStack($this->post_trim, $this->stack);
+        $this->cleanupWSByPoppingStack($this->post_trim, $this->stack);
 
         // Everything left on the stack should be HTML (or broken tags), so pop it
         // all off as plain text, concatenate it, and return it.
